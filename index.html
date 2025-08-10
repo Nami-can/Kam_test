@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>GeoAlert</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Fonts & icons (как в оригинале) -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --tg-bg: #17212b;
+            --tg-secondary: #232e3c;
+            --tg-primary: #2b5278;
+            --tg-accent: #5288c1;
+            --tg-text: #e1e3e6;
+            --tg-hint: #707579;
+            --tg-green: #39b44a;
+            --tg-red: #e64d4d;
+        }
+        
+         * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: var(--tg-bg);
+        color: var(--tg-text);
+        line-height: 1.6;
+        min-height: 100vh;
+        font-size: 18px;
+    }
+    
+    /* Шапка */
+    header {
+        background: linear-gradient(rgba(23, 33, 43, 0.9), rgba(35, 46, 60, 0.9)), 
+                    url('https://images.unsplash.com/photo-1580193769210-b8d1c049a7d9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80') center/cover;
+        padding: 30px 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .header-content {
+        position: relative;
+        z-index: 2;
+        padding: 20px;
+    }
+    
+    .header-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 32px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 15px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .header-subtitle {
+        font-size: 20px;
+        color: var(--tg-accent);
+        opacity: 0.9;
+    }
+    
+    .header-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid var(--tg-accent);
+        margin: 0 auto 20px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .header-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 25px;
+    }
+    
+    /* Карточки */
+    .tg-card {
+        background-color: var(--tg-secondary);
+        border-radius: 16px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .card-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--tg-accent);
+    }
+    
+    /* Карта */
+    .map-container {
+        height: 65vh;
+        min-height: 500px;
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 30px;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    #map {
+        height: 100%;
+        width: 100%;
+    }
+    
+    /* Секция истории */
+    .history-item {
+        display: flex;
+        margin-bottom: 30px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    
+    .history-image {
+        width: 200px;
+        height: 200px;
+        flex-shrink: 0;
+    }
+    
+    .history-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .history-content {
+        padding: 20px;
+        flex-grow: 1;
+    }
+    
+    .history-title {
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: white;
+        font-size: 22px;
+    }
+    
+    .history-magnitude {
+        display: inline-block;
+        background-color: var(--tg-red);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .history-date {
+        font-size: 16px;
+        color: var(--tg-hint);
+        margin-bottom: 15px;
+    }
+    
+    .history-description {
+        font-size: 18px;
+        line-height: 1.6;
+    }
+    
+    /* Вкладки */
+    .tabs {
+        display: flex;
+        background-color: var(--tg-secondary);
+        border-radius: 30px;
+        padding: 8px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .tab {
+        flex: 1;
+        text-align: center;
+        padding: 15px 10px;
+        font-size: 18px;
+        font-weight: 600;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--tg-hint);
+    }
+    
+    .tab.active {
+        background-color: var(--tg-primary);
+        color: white;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+        animation: fadeIn 0.4s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Кнопки */
+    .tg-btn {
+        background-color: var(--tg-primary);
+        color: white;
+        border: none;
+        border-radius: 16px;
+        padding: 18px;
+        font-size: 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        width: 100%;
+        margin-top: 25px;
+    }
+    
+    .tg-btn:hover {
+        background-color: var(--tg-accent);
+    }
+    
+    /* Безопасность */
+    .safety-section {
+        margin-bottom: 35px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 25px;
+    }
+
+    .safety-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .safety-icon {
+        width: 60px;
+        height: 60px;
+        background-color: var(--tg-primary);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 20px;
+        color: white;
+        font-size: 24px;
+    }
+
+    /* Утилитарные классы */
+    #history-list { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 20px; 
+    }
+    
+    .small-muted { 
+        font-size: 16px; 
+        color: var(--tg-hint); 
+    }
+
+    /* Адаптация для мобильных */
+    @media (max-width: 768px) {
+        .header-title {
+            font-size: 28px;
+        }
+        
+        .header-subtitle {
+            font-size: 18px;
+        }
+        
+        .header-image {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .container {
+            padding: 15px;
+        }
+        
+        .tg-card {
+            padding: 20px;
+        }
+        
+        .map-container {
+            height: 55vh;
+            min-height: 400px;
+        }
+        
+        .history-item {
+            flex-direction: column;
+        }
+        
+        .history-image {
+            width: 100%;
+            height: 200px;
+        }
+        
+        .tab {
+            padding: 11px 2px;
+            font-size: 13px;
+        }
+    }
+        /* небольшие утилитарные правки для списка истории (не дизайн) */
+        #history-list { display: flex; flex-direction: column; gap: 12px; }
+        .small-muted { font-size: 12px; color: var(--tg-hint); }
+    </style>
+</head>
+<body>
+    <!-- Новая красивая шапка с изображением -->
+    <header>
+        <div class="header-content">
+            <div class="header-image">
+                <img src="https://images.unsplash.com/photo-1551524559-8af4e6624178?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1026&q=80" alt="Камчатка">
+            </div>
+            <h1 class="header-title">GeoAlert: Камчатский мониторинг</h1>
+            <p class="header-subtitle">Камчатка и Дальний Восток</p>
+        </div>
+    </header>
+    
+    <div class="container">
+    <!-- Вкладки -->
+    <div class="tabs">
+        <div class="tab active" data-tab="map">Карта</div>
+        <div class="tab" data-tab="history">История</div>
+        <div class="tab" data-tab="safety">Безопасность</div>
+        <div class="tab" data-tab="bb">Дополнительное</div>
+    </div>
+
+    <!-- Контент вкладок -->
+    
+    <!-- Вкладка Карты -->
+    <div id="map-content" class="tab-content active">
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        
+        <div class="tg-card">
+            <div class="card-title">
+                <i class="fas fa-map-marked-alt"></i>
+                Сейсмическая активность
+            </div>
+            <p style="margin-bottom: 15px; font-size: 14px;">На карте отмечены события из ближайшего региона Камчатки. Маркеры добавляются автоматически при появлении новых событий.</p>
+            
+            <div style="margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="font-size: 16px; font-weight: 600;">
+                        <i class="fas fa-bolt" style="color: var(--tg-accent); margin-right: 8px;"></i>
+                        Последние события
+                    </h3>
+                    <div id="last-update-time" style="font-size: 12px; color: var(--tg-hint);">
+                        Обновление...
+                    </div>
+                </div>
+                
+                <div id="recent-quakes-list" style="max-height: 300px; overflow-y: auto;">
+                    <div style="text-align: center; padding: 15px; color: var(--tg-hint);">
+                        <i class="fas fa-spinner fa-spin"></i> Загрузка данных...
+                    </div>
+                </div>
+            </div>
+            
+            <button class="tg-btn" id="fit-map">
+                <i class="fas fa-search"></i>
+                Найти на карте
+            </button>
+        </div>
+    </div>
+
+    <!-- Вкладка Истории -->
+    <div id="history-content" class="tab-content">
+        <div class="tg-card">
+            <div class="card-title">
+                <i class="fas fa-landmark"></i>
+                Крупнейшие землетрясения (динамический список)
+            </div>
+
+            <div id="history-list">
+                <div class="history-item">
+                    <div class="history-image">
+                        <img src="i.webp" alt="Землетрясение">
+                    </div>
+                    <div class="history-content">
+                        <span class="history-magnitude">9.0 Mw</span>
+                        <h3 class="history-title">Камчатское землетрясение (1952)</h3>
+                        <div class="history-date">4 ноября 1952 года</div>
+                        <p class="history-description">Одно из самых мощных землетрясений в истории, вызвавшее разрушительное цунами высотой до 15 метров.</p>
+                    </div>
+                </div>
+
+                <div class="history-item">
+                    <div class="history-image">
+                        <img src="i (1).webp" alt="Землетрясение">
+                    </div>
+                    <div class="history-content">
+                        <span class="history-magnitude">7.6 Mw</span>
+                        <h3 class="history-title">Корякское землетрясение (2006)</h3>
+                        <div class="history-date">21 апреля 2006 года</div>
+                        <p class="history-description">Сильное землетрясение с эпицентром в 100 км от побережья Камчатки.</p>
+                    </div>
+                </div>
+
+                <div class="history-item">
+                    <div class="history-image">
+                        <img src="i12webp" alt="Землетрясение">
+                    </div>
+                    <div class="history-content">
+                        <span class="history-magnitude">8.5 Mw</span>
+                        <h3 class="history-title">Усть-Камчатское землетрясение (1923)</h3>
+                        <div class="history-date">13 февраля 1923 года</div>
+                        <p class="history-description">Мощное землетрясение, вызвавшее значительные разрушения в Усть-Камчатске.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка Истории землетрясений -->
+    <div id="history_kam-content" class="tab-content">
+        <div class="tg-card">
+            <div class="card-title">
+                <i class="fas fa-book-open"></i>
+                Истории очевидцев
+            </div>
+            <p>Здесь будут рассказы людей...</p>
+        </div>
+    </div>
+
+    <!-- Вкладка Безопасности -->
+<div id="safety-content" class="tab-content" style="display: none;">
+    <!-- Заголовок с градиентом -->
+    <div style="display: flex; align-items: center; margin-bottom: 25px; padding: 15px; background: linear-gradient(135deg, #ff5f6d, #ffc371); border-radius: 12px; box-shadow: 0 4px 12px rgba(255,95,109,0.2);">
+        <div style="background: white; width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <i class="fas fa-shield-alt" style="color: #ff5f6d; font-size: 22px;"></i>
+        </div>
+        <div>
+            <h2 style="margin: 0; color: white; font-size: 22px; font-weight: 700;">Безопасность при землетрясении</h2>
+            <p style="margin: 5px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Правила поведения в чрезвычайной ситуации</p>
+        </div>
+    </div>
+
+    <!-- Видео-инструкция -->
+    <div style="margin-bottom: 25px; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.1);">
+        <div style="position: relative; padding-bottom: 56.25%; height: 0; background: #000;">
+            <iframe width="100%" height="100%" style="position: absolute; top: 0; left: 0;" src="Ч" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+        <div style="padding: 15px; background: white;">
+            <h3 style="margin: 0 0 5px 0; color: #333; font-size: 18px;">Видеоинструкция: Как вести себя при землетрясении</h3>
+            <p style="margin: 0; color: #666; font-size: 14px;">МЧС России рекомендует</p>
+        </div>
+    </div>
+
+    <!-- В помещении -->
+    <div style="margin-bottom: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #ff5f6d;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <div style="background: #ff5f6d; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                <i class="fas fa-home" style="color: white; font-size: 18px;"></i>
+            </div>
+            <h3 style="margin: 0; font-size: 18px; color: #333; font-weight: 600;">В помещении</h3>
+        </div>
+        <ul style="padding-left: 20px; margin: 0; color: #555; line-height: 1.6;">
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Спрячьтесь под крепким столом или кроватью</li>
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Держитесь подальше от окон и стеклянных поверхностей</li>
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Не пользуйтесь лифтами</li>
+            <li style="position: relative; padding-left: 10px;">Если нет укрытия - сядьте у внутренней стены</li>
+        </ul>
+    </div>
+
+    <!-- На улице -->
+    <div style="margin-bottom: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #4cd964;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <div style="background: #4cd964; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                <i class="fas fa-tree" style="color: white; font-size: 18px;"></i>
+            </div>
+            <h3 style="margin: 0; font-size: 18px; color: #333; font-weight: 600;">На улице</h3>
+        </div>
+        <ul style="padding-left: 20px; margin: 0; color: #555; line-height: 1.6;">
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Отойдите от зданий, линий электропередач</li>
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Ищите открытое пространство</li>
+            <li style="position: relative; padding-left: 10px;">Остерегайтесь падающих обломков</li>
+        </ul>
+    </div>
+
+    <!-- В транспорте -->
+    <div style="margin-bottom: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #5ac8fa;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <div style="background: #5ac8fa; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                <i class="fas fa-car" style="color: white; font-size: 18px;"></i>
+            </div>
+            <h3 style="margin: 0; font-size: 18px; color: #333; font-weight: 600;">В автомобиле</h3>
+        </div>
+        <ul style="padding-left: 20px; margin: 0; color: #555; line-height: 1.6;">
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Остановитесь в безопасном месте</li>
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Оставайтесь в машине до окончания толчков</li>
+            <li style="position: relative; padding-left: 10px;">Избегайте мостов и эстакад</li>
+        </ul>
+    </div>
+
+    <!-- После землетрясения -->
+    <div style="background: linear-gradient(135deg, #fff8e1, #fff); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-left: 5px solid #ff9500; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <div style="background: #ff9500; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                <i class="fas fa-exclamation-triangle" style="color: white; font-size: 18px;"></i>
+            </div>
+            <h3 style="margin: 0; font-size: 18px; color: #333; font-weight: 600;">После землетрясения</h3>
+        </div>
+        <ul style="padding-left: 20px; margin: 0; color: #555; line-height: 1.6;">
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Проверьте себя и окружающих на травмы</li>
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Отключите газ и электричество</li>
+            <li style="margin-bottom: 10px; position: relative; padding-left: 10px;">Будьте готовы к повторным толчкам</li>
+            <li style="position: relative; padding-left: 10px;">Слушайте официальные источники информации</li>
+        </ul>
+    </div>
+
+    <!-- Экстренные контакты -->
+    <div style="background: linear-gradient(135deg, #ff3a30, #ff5e57); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(255,58,48,0.3); color: white;">
+        <h3 style="margin: 0 0 15px 0; font-size: 18px; display: flex; align-items: center;">
+            <i class="fas fa-phone-alt" style="margin-right: 10px;"></i>
+            Экстренные контакты
+        </h3>
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+            <div style="margin-bottom: 10px; width: 48%;">
+                <div style="font-weight: 600; margin-bottom: 5px;">МЧС России</div>
+                <div>101 или 112</div>
+            </div>
+            <div style="margin-bottom: 10px; width: 48%;">
+                <div style="font-weight: 600; margin-bottom: 5px;">Скорая помощь</div>
+                <div>103</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Вкладка Дополнительных функций -->
+    <div id="bb-content" class="tab-content">
+        <div class="tg-card">
+            <div class="card-title"><i class="fas fa-bell"></i> Уведомления</div>
+            <p class="small-muted">Разрешите браузерные уведомления и включите их, чтобы получать оповещения о новых землетрясениях в Камчатке.</p>
+            <div style="display:flex; gap:10px; margin-top:12px;">
+                <button class="tg-btn" id="notify-btn"><i class="fas fa-bell"></i>&nbsp;<span id="notify-btn-text">Включить уведомления</span></button>
+                <input id="minMag" type="number" step="0.1" min="0" max="10" value="4" style="padding:10px;border-radius:10px;border:none;background:var(--tg-secondary);color:var(--tg-text);width:120px" title="Порог магнитуды для уведомлений" />
+            </div>
+        </div>
+
+       <div class="tg-card">
+    <div class="card-title"><i class="fas fa-shield-alt"></i> Ближайшие убежища</div>
+    
+    <div class="shelter-sticker" style="
+        background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin: 15px 0;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid var(--tg-accent);
+    ">
+        <div style="
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        "></div>
+        
+        <i class="fas fa-home" style="font-size: 40px; margin-bottom: 15px; display: block; text-align: center;"></i>
+        
+        <!-- Петропавловск-Камчатский -->
+        <div class="shelter-item" style="
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        ">
+            <h4 style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-city"></i> Петропавловск-Камчатский
+            </h4>
+            <p style="margin-bottom: 10px; line-height: 1.5;">
+                <i class="fas fa-map-marker-alt" style="color: #4fc3f7;"></i> 
+                <strong>Халактырское шоссе, д. 6/6</strong>
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <a href="https://dobro.press" target="_blank" style="
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    text-decoration: none;
+                ">
+                    <i class="fas fa-newspaper"></i> dobro.press
+                </a>
+                <a href="https://m-news.online" target="_blank" style="
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    text-decoration: none;
+                ">
+                    <i class="fas fa-globe"></i> m-news.online
+                </a>
+            </div>
+        </div>
+        
+        <!-- Елизовский округ и Вилючинск -->
+        <div class="shelter-item" style="
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+        ">
+            <h4 style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-mountain"></i> Елизовский округ и Вилючинск
+            </h4>
+            <p style="margin-bottom: 10px; line-height: 1.5;">
+                <i class="fas fa-map-marker-alt" style="color: #4fc3f7;"></i> 
+                <strong>с. Паратунка, ул. Невельского, д. 9</strong><br>
+                <span style="font-size: 14px;">(Центр "Экосистема")</span>
+            </p>
+        </div>
+    </div>
+    
+    <button id="show-shelter-map" class="tg-btn" style="margin-top: 20px;">
+        <i class="fas fa-map-marked-alt"></i> Показать на карте
+    </button>
+    
+    <p class="small-muted" style="margin-top: 15px;">
+        Данные актуальны на 2024 год. Рекомендуем уточнять информацию перед посещением.
+    </p>
+</div>
+
+<script>
+document.getElementById('show-shelter-map').addEventListener('click', function() {
+    // Отправка сообщения с картой через Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+        const locations = [
+            {
+                title: "Убежище в Петропавловске-Камчатском",
+                address: "Халактырское шоссе, 6/6",
+                lat: 53.0476,
+                lon: 158.6487
+            },
+            {
+                title: "Центр 'Экосистема' (Паратунка)",
+                address: "ул. Невельского, 9",
+                lat: 52.9625,
+                lon: 158.2514
+            }
+        ];
+        
+        Telegram.WebApp.sendData(JSON.stringify({
+            type: "show_shelters",
+            locations: locations
+        }));
+    } else {
+        alert("Откройте эту функцию в Telegram для просмотра карты");
+    }
+});
+</script>
+    </div>
+</div>
+
+    <!-- Leaflet and FontAwesome scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+    <script>
+    // Улучшенная конфигурация
+    const CONFIG = {
+        apiUrl: 'https://earthquake.usgs.gov/fdsnws/event/1/query',
+        region: {
+            lat: 54.5,
+            lon: 160.0,
+            radius: 800
+        },
+        minMagnitude: 2.0, // Теперь включаем слабые землетрясения от 2 баллов
+        daysToLoad: 10, // Загружаем данные за последние 7 дней
+        refreshInterval: 300000, // 5 минут
+        requestTimeout: 10000,
+        maxRetries: 3
+    };
+
+    // Хранилище данных
+    const earthquakeStore = new Map();
+    let map, quakeLayer;
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            initMap();
+            await loadInitialData();
+            startAutoRefresh();
+            
+            document.getElementById('fit-map')?.addEventListener('click', () => {
+                map?.setView([CONFIG.region.lat, CONFIG.region.lon], 6);
+            });
+            
+        } catch (error) {
+            console.error('Ошибка инициализации:', error);
+            showError('Ошибка загрузки приложения');
+        }
+    });
+
+    // 1. Инициализация карты
+    function initMap() {
+        const mapElement = document.getElementById('map');
+        if (!mapElement) throw new Error('Элемент карты не найден');
+        
+        map = L.map(mapElement, {
+            preferCanvas: true,
+            zoomControl: false
+        }).setView([CONFIG.region.lat, CONFIG.region.lon], 6);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+        
+        quakeLayer = L.layerGroup().addTo(map);
+    }
+
+    // 2. Загрузка начальных данных
+    async function loadInitialData() {
+        updateStatus('Загрузка данных...');
+        
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - CONFIG.daysToLoad);
+        
+        try {
+            const data = await fetchEarthquakes(startDate, endDate);
+            processEarthquakes(data.features);
+            updateStatus(`Загружено ${data.features.length} событий`);
+        } catch (error) {
+            console.error('Ошибка загрузки:', error);
+            throw error;
+        }
+    }
+
+    // 3. Автообновление
+    function startAutoRefresh() {
+        setInterval(async () => {
+            try {
+                const lastHour = new Date(Date.now() - 3600000);
+                const data = await fetchEarthquakes(lastHour, new Date());
+                
+                // Добавляем только новые события
+                const newEvents = data.features.filter(f => !earthquakeStore.has(f.id));
+                if (newEvents.length > 0) {
+                    processEarthquakes(newEvents);
+                    updateStatus(`Новых событий: ${newEvents.length}`);
+                }
+            } catch (error) {
+                console.error('Ошибка обновления:', error);
+            }
+        }, CONFIG.refreshInterval);
+    }
+
+    // 4. Запрос данных с API
+    async function fetchEarthquakes(startDate, endDate) {
+        const url = new URL(CONFIG.apiUrl);
+        url.searchParams.set('format', 'geojson');
+        url.searchParams.set('starttime', startDate.toISOString());
+        url.searchParams.set('endtime', endDate.toISOString());
+        url.searchParams.set('latitude', CONFIG.region.lat);
+        url.searchParams.set('longitude', CONFIG.region.lon);
+        url.searchParams.set('maxradiuskm', CONFIG.region.radius);
+        url.searchParams.set('minmagnitude', CONFIG.minMagnitude);
+        url.searchParams.set('orderby', 'time-asc'); // Сначала старые
+        
+        const response = await fetchWithRetry(url.toString());
+        return await response.json();
+    }
+
+    // 5. Обработка землетрясений
+    function processEarthquakes(features) {
+        if (!features || !features.length) return;
+        
+        const quakeList = document.getElementById('recent-quakes-list');
+        if (!quakeList) return;
+        
+        // Сортируем от новых к старым
+        features.sort((a, b) => b.properties.time - a.properties.time);
+        
+        // Очищаем список только при первой загрузке
+        if (earthquakeStore.size === 0) {
+            quakeList.innerHTML = '';
+        }
+        
+        features.forEach(feature => {
+            if (!earthquakeStore.has(feature.id)) {
+                addEarthquakeToMap(feature);
+                addEarthquakeToList(feature);
+                earthquakeStore.set(feature.id, true);
+            }
+        });
+    }
+
+    // 6. Добавление на карту
+    function addEarthquakeToMap(feature) {
+        if (!map || !quakeLayer) return;
+        
+        const props = feature.properties;
+        const [lon, lat, depth] = feature.geometry.coordinates;
+        
+        const marker = L.circleMarker([lat, lon], {
+            radius: getRadius(props.mag),
+            fillColor: getDepthColor(depth),
+            color: '#000',
+            weight: props.mag >= 4.0 ? 2 : 1,
+            fillOpacity: 0.8
+        });
+        
+        marker.bindPopup(createPopupContent(feature));
+        marker.addTo(quakeLayer);
+    }
+
+    // 7. Добавление в список
+    function addEarthquakeToList(feature) {
+        const quakeList = document.getElementById('recent-quakes-list');
+        if (!quakeList) return;
+        
+        const props = feature.properties;
+        const [lon, lat, depth] = feature.geometry.coordinates;
+        const time = new Date(props.time);
+        
+        const quakeItem = document.createElement('div');
+        quakeItem.className = 'quake-item';
+        quakeItem.style.cssText = `
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            background: ${props.mag >= 4.0 ? 'rgba(255,152,0,0.1)' : 'transparent'};
+        `;
+        
+        quakeItem.addEventListener('click', () => {
+            map?.setView([lat, lon], 8);
+        });
+        
+        quakeItem.innerHTML = `
+            <div style="width: 30px; height: 30px; border-radius: 50%; 
+                        background-color: ${getDepthColor(depth)};
+                        display: flex; align-items: center; justify-content: center; 
+                        margin-right: 10px; font-weight: bold; font-size: 12px; color: white;">
+                ${props.mag.toFixed(1)}
+            </div>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 14px;">
+                    ${props.place}
+                    ${props.mag >= 4.0 ? ' <span style="color:#ff9800">(сильное)</span>' : ''}
+                </div>
+                <div style="font-size: 12px; color: var(--tg-hint);">
+                    ${time.toLocaleDateString()} ${time.toLocaleTimeString()} · 
+                    Глубина: ${depth.toFixed(1)} км
+                </div>
+            </div>
+            <i class="fas fa-chevron-right" style="color: var(--tg-hint);"></i>
+        `;
+        
+        quakeList.prepend(quakeItem);
+        
+        // Ограничиваем список 50 элементами
+        if (quakeList.children.length > 50) {
+            quakeList.removeChild(quakeList.lastChild);
+        }
+    }
+
+    // Вспомогательные функции
+    function createPopupContent(feature) {
+        const props = feature.properties;
+        const [,, depth] = feature.geometry.coordinates;
+        const time = new Date(props.time);
+        
+        return `
+            <div style="font-weight:bold;margin-bottom:5px">
+                ${props.place}
+            </div>
+            <div>Магнитуда: <b>${props.mag.toFixed(1)} M</b></div>
+            <div>Глубина: <b>${depth.toFixed(1)} км</b></div>
+            <div>Дата: <b>${time.toLocaleDateString()}</b></div>
+            <div>Время: <b>${time.toLocaleTimeString()}</b></div>
+            ${props.url ? `<a href="${props.url}" target="_blank" style="color:#ff9800">Подробнее</a>` : ''}
+        `;
+    }
+
+    async function fetchWithRetry(url, retries = CONFIG.maxRetries) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), CONFIG.requestTimeout);
+                
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    cache: 'no-store'
+                });
+                
+                clearTimeout(timeout);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response;
+                
+            } catch (error) {
+                if (i === retries - 1) throw error;
+                await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+            }
+        }
+    }
+
+    function getDepthColor(depth) {
+        return depth < 30 ? '#ff5252' :    // Красный - очень мелкие
+               depth < 70 ? '#ff9800' :    // Оранжевый - мелкие
+               depth < 150 ? '#ffeb3b' :   // Желтый - средние
+               '#4caf50';                 // Зеленый - глубокие
+    }
+
+    function getRadius(mag) {
+        return Math.min(25, Math.max(4, mag * 4)); // Диаметр зависит от магнитуды
+    }
+
+    function updateStatus(text) {
+        const element = document.getElementById('last-update-time');
+        if (element) element.textContent = text;
+    }
+
+    function showError(message) {
+        const element = document.getElementById('recent-quakes-list');
+        if (!element) return;
+        
+        element.innerHTML = `
+            <div style="text-align:center;padding:20px;color:#ff5252;">
+                <i class="fas fa-exclamation-triangle"></i><br>
+                ${message}<br>
+                <button onclick="window.location.reload()" 
+                    style="margin-top:10px;padding:8px 16px;background:#ff9800;border:none;border-radius:4px;color:white;">
+                    Обновить
+                </button>
+            </div>
+        `;
+    }
+    // Добавьте этот код в ваш DOMContentLoaded обработчик
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        // Удаляем класс active у всех вкладок
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        
+        // Добавляем класс active только к выбранной вкладке
+        tab.classList.add('active');
+        
+        // Здесь можно добавить логику для отображения соответствующего контента
+        const tabName = tab.getAttribute('data-tab');
+        switchTabContent(tabName);
+    });
+});
+
+function switchTabContent(tabName) {
+    // Скрываем все контейнеры контента
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Показываем только выбранный контейнер
+    const activeContent = document.getElementById(`${tabName}-content`);
+    if (activeContent) {
+        activeContent.style.display = 'block';
+    }
+}
+
+</script>
